@@ -1,3 +1,5 @@
+use crate::chapter1::{iter_newton_cube_root::cube_root, iter_newton_sqrt::sqrt};
+
 mod chapter1;
 
 fn main() {
@@ -8,7 +10,10 @@ fn main() {
     // No exercise 1.5 since it is a pen and paper exercise
     // No exercise 1.6 since it is an exercise getting at how if-cond works in LISP
     exercise1_7();
+    exercise1_8();
 }
+
+
 
 fn exercise1_1() {
     // Exercise 1.1 page 20
@@ -93,7 +98,17 @@ fn exercise1_4() {
     println!("Ending Exercise 1.4");
 }
 
-fn exercise1_7() {}
+fn exercise1_7() {
+    println!("Starting Exercise 1.7");
+    println!("sqrt(9.0) = {}", sqrt(9.0));
+    println!("Ending Exercise 1.7");
+}
+
+fn exercise1_8() {
+    println!("Starting Exercise 1.8");
+    println!("cube_root(27.0) = {}", cube_root(27.0));
+    println!("Ending Exercise 1.8");
+}
 
 #[test]
 fn test_sum_largest() {
