@@ -31,6 +31,7 @@ pub fn chapter1() {
     // NO exercise 1.26 since it is an explain exercise
     exercise1_27();
     exercise1_28();
+    exercise1_29();
 }
 
 fn exercise1_1() {
@@ -685,7 +686,7 @@ fn exercise1_28() {
         return iter(10, n);
     }
 
-    println!("Starting exercise 1.27");
+    println!("Starting exercise 1.28");
     let carmichael_nums: Vec<i64> = vec![561, 1105, 1729, 2465, 2821, 6601];
 
     for carmichael in carmichael_nums {
@@ -697,8 +698,79 @@ fn exercise1_28() {
         }
     }
 
-    println!("Ending exercise 1.27");
+    println!("Ending exercise 1.28");
 }
+
+fn exercise1_29() {
+    // This exercise is a little harder in Rust than LISP
+    // Rust has no concept of a global state
+    // And Rust inner functions like next() can not inherit variables from the super-scope
+    // Therefore, we need to pass around many more variables than you can in LISP
+    // While Rust can produce much more efficient code, it often requires more engineering
+
+    fn simpson(f: &dyn Fn(f64) -> f64, a: f64, b: f64, n: i32) -> f64 {
+        // There is a huge trade-off in this function between storing values and continually computing them
+        // I went for storing and passing around values.
+        // While this makes the code messier, for my application CPU cycles are more valuable than RAM
+        // In other applications, you may prefer to calculate many variables such as c, h, n at every iteration
+        fn sum(
+            term: &dyn Fn(&dyn Fn(f64) -> f64, f64, i32, f64, i32) -> f64, // How to calculate the current Simpson term
+            a: f64,                         // The starting lower bound
+            k: i32,                         // The current integer step
+            c: f64,                         // The current step value
+            next: &dyn Fn(f64, f64) -> f64, // How to get to the next value of c
+            b: f64,                         // The upper bound of the integral
+            h: f64,                         // The step size
+            f: &dyn Fn(f64) -> f64,         // The integral function to be calculated
+            n: i32,                         // The total number of steps
+        ) -> f64 {
+            if k > n {
+                return 0.0;
+            } else {
+                return term(f, a, k, h, n) + sum(term, a, k + 1, next(c, h), next, b, h, f, n);
+            }
+        }
+
+        fn y(f: &dyn Fn(f64) -> f64, a: f64, k: i32, h: f64, n: i32) -> f64 {
+            // Could reorganise this let-if for optimisation
+            let mult = if k == 0 {
+                1.0
+            } else if k == n {
+                1.0
+            } else if even(k) {
+                2.0
+            } else {
+                4.0
+            };
+            return mult * f(a + k as f64 * h);
+        }
+
+        fn next(n: f64, h: f64) -> f64 {
+            return n + h;
+        }
+
+        let h = (b - a) / n as f64;
+        let h_reduced = h / 3.0;
+
+        let res = sum(&y, a, 0, a, &next, b, h, f, n);
+
+        return h_reduced * res;
+    }
+
+    fn square(x: f64) -> f64 {
+        return x * x;
+    }
+
+    println!("Starting exercise 1.29");
+    println!("For this exercise, we will integrate x^2 between 0 and 1 numerically, the analytic answer is 1/3 = 0.33333.....");
+    let now = Instant::now();
+    let res = simpson(&square, 0.0, 1.0, 10);
+    let time = now.elapsed().as_nanos();
+    println!("The numerical calculation gives {}, in {}ns", res, time);
+    println!("Ending exercise 1.29")
+}
+
+fn exercise1_30() {}
 
 #[test]
 fn test_sum_largest() {
