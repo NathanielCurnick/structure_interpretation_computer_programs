@@ -1,7 +1,7 @@
 use crate::chapter1::{iter_newton_cube_root::cube_root, iter_newton_sqrt::sqrt};
 use num::{traits::Pow, Num};
+use rand::prelude::*;
 use std::{ops::Rem, time::Instant};
-
 pub fn chapter1() {
     exercise1_1();
     // No exercise 1.2 since it is a pen and paper exercise
@@ -25,6 +25,12 @@ pub fn chapter1() {
     // No exercise 1.20, since it is about interpreter orders
     exercise1_21();
     exercise1_22();
+    exercise1_23();
+    exercise1_24();
+    // No exercise 1.25 since it is an explain exercise
+    // NO exercise 1.26 since it is an explain exercise
+    exercise1_27();
+    exercise1_28();
 }
 
 fn exercise1_1() {
@@ -362,17 +368,39 @@ fn exercise1_19() {
     print!("\n");
 }
 
-fn smallest_divisor(n: i32) -> i32 {
-    find_divisor(n, 2)
-}
-
-fn find_divisor(n: i32, test_divisor: i32) -> i32 {
+fn find_divisor_slow(n: i32, test_divisor: i32) -> i32 {
     if test_divisor.pow(2) > n {
         n
     } else if divides(test_divisor, n) {
         test_divisor
     } else {
-        find_divisor(n, test_divisor + 1)
+        find_divisor_slow(n, test_divisor + 1)
+    }
+}
+
+fn find_divisor_fast(n: i32, test_divisor: i32) -> i32 {
+    if test_divisor.pow(2) > n {
+        n
+    } else if divides(test_divisor, n) {
+        test_divisor
+    } else {
+        find_divisor_fast(n, next(test_divisor))
+    }
+}
+
+fn smallest_divisor_fast(n: i32) -> i32 {
+    find_divisor_fast(n, 2)
+}
+
+fn smallest_divisor_slow(n: i32) -> i32 {
+    find_divisor_slow(n, 2)
+}
+
+fn next(x: i32) -> i32 {
+    if x == 2 {
+        3
+    } else {
+        x + 2
     }
 }
 
@@ -380,17 +408,27 @@ fn divides(a: i32, b: i32) -> bool {
     b.rem(a) == 0
 }
 
-fn prime(n: i32) -> bool {
-    smallest_divisor(n) == n
+fn prime_fast(n: i32) -> bool {
+    smallest_divisor_fast(n) == n
+}
+
+fn prime_slow(n: i32) -> bool {
+    smallest_divisor_slow(n) == n
 }
 
 fn exercise1_21() {
-    println!("7 is prime? {}", prime(7));
-    println!("6 is prime? {}", prime(6));
+    println!("7 is prime? {}", prime_slow(7));
+    println!("6 is prime? {}", prime_slow(6));
 
-    println!("Smallest divisor of 199 is {}", smallest_divisor(199));
-    println!("Smallest divisor of 1,999 is {}", smallest_divisor(1_999));
-    println!("Smallest divisor of 19,999 is {}", smallest_divisor(19_999));
+    println!("Smallest divisor of 199 is {}", smallest_divisor_slow(199));
+    println!(
+        "Smallest divisor of 1,999 is {}",
+        smallest_divisor_slow(1_999)
+    );
+    println!(
+        "Smallest divisor of 19,999 is {}",
+        smallest_divisor_slow(19_999)
+    );
 }
 
 fn exercise1_22() {
@@ -398,7 +436,7 @@ fn exercise1_22() {
         let mut found_so_far = 0_i32;
         let mut m = n;
         while found_so_far < 3 {
-            if prime(m) {
+            if prime_slow(m) {
                 found_so_far += 1
             }
 
@@ -412,6 +450,7 @@ fn exercise1_22() {
         return now.elapsed().as_nanos();
     }
 
+    println!("Starting Exercise 1.22");
     // Note: if you have a reallllllllly slow computer you might lose some accuracy in these timings
     let thousands = timed_prime(1000) as f64;
     let ten_thousands = timed_prime(10_000) as f64;
@@ -439,6 +478,226 @@ fn exercise1_22() {
         "Hundred thousands to millions {}",
         millions / hundred_thousands
     );
+
+    println!("Ending exercise 1.22")
+}
+
+fn exercise1_23() {
+    fn find_three_larger_primes(n: i32) {
+        let mut found_so_far = 0_i32;
+        let mut m = n;
+        while found_so_far < 3 {
+            if prime_fast(m) {
+                found_so_far += 1
+            }
+
+            m += 1;
+        }
+    }
+
+    fn timed_prime(n: i32) -> u128 {
+        let now = Instant::now();
+        find_three_larger_primes(n);
+        return now.elapsed().as_nanos();
+    }
+
+    println!("Starting exercise 1.23");
+
+    let thousands = timed_prime(1000) as f64;
+    let ten_thousands = timed_prime(10_000) as f64;
+    let hundred_thousands = timed_prime(100_000) as f64;
+    let millions = timed_prime(1_000_000) as f64;
+
+    println!("Times taken to calculate three times larger than n in nanoseconds");
+    println!("1,000\t|{}", thousands);
+    println!("10,000\t|{}", ten_thousands);
+    println!("100,000\t|{}", hundred_thousands);
+    println!("1,000,000\t|{}", millions);
+
+    println!(
+        "We expect each stage to grow by around sqrt(10) which is {}",
+        10_f64.powf(0.5)
+    );
+
+    println!("Here's how much each stage grew by");
+    println!("Thousands to ten thousand {}", ten_thousands / thousands);
+    println!(
+        "Thousands to hundred thousands {}",
+        hundred_thousands / ten_thousands
+    );
+    println!(
+        "Hundred thousands to millions {}",
+        millions / hundred_thousands
+    );
+
+    println!("Ending exercise 1.23");
+}
+
+fn square(x: i64) -> i64 {
+    return x * x;
+}
+
+fn expmod(base: i64, exp: i64, m: i64) -> i64 {
+    if exp == 0 {
+        return 1;
+    }
+
+    if even(exp) {
+        square(expmod(base, exp / 2, m)).rem(m)
+    } else {
+        (base * expmod(base, exp - 1, m)).rem(m)
+    }
+}
+
+fn fermat_test(n: i64) -> bool {
+    fn try_it(a: i64, n: i64) -> bool {
+        expmod(a, n, n) == a
+    }
+
+    try_it(rand::thread_rng().gen_range(1..=n - 1), n)
+}
+
+fn fermat_prime(n: i64, num_times: i64) -> bool {
+    if num_times == 0 {
+        true
+    } else if fermat_test(n) {
+        fermat_prime(n, num_times - 1)
+    } else {
+        false
+    }
+}
+
+fn exercise1_24() {
+    fn find_three_larger_primes_fermat(n: i64) {
+        let mut found_so_far = 0_i64;
+        let mut m = n;
+        while found_so_far < 3 {
+            if fermat_prime(m, 3) {
+                found_so_far += 1
+            }
+
+            m += 1;
+        }
+    }
+
+    fn timed_prime(n: i64) -> u128 {
+        let now = Instant::now();
+        find_three_larger_primes_fermat(n);
+        return now.elapsed().as_nanos();
+    }
+
+    println!("Starting exercise 1.24");
+
+    let thousands = timed_prime(1000) as f64;
+    let ten_thousands = timed_prime(10_000) as f64;
+    let hundred_thousands = timed_prime(100_000) as f64;
+    let millions = timed_prime(1_000_000) as f64;
+
+    println!("Times taken to calculate three times larger than n in nanoseconds");
+    println!("1,000\t|{}", thousands);
+    println!("10,000\t|{}", ten_thousands);
+    println!("100,000\t|{}", hundred_thousands);
+    println!("1,000,000\t|{}", millions);
+
+    println!(
+        "We expect each stage to grow by around log(10) which is {}",
+        10_f64.log10()
+    );
+
+    println!("Here's how much each stage grew by");
+    println!("Thousands to ten thousand {}", ten_thousands / thousands);
+    println!(
+        "Thousands to hundred thousands {}",
+        hundred_thousands / ten_thousands
+    );
+    println!(
+        "Hundred thousands to millions {}",
+        millions / hundred_thousands
+    );
+
+    println!("Ending exercise 1.24");
+}
+
+fn exercise1_27() {
+    fn fermat_non_random_test(n: i64, a: i64) -> bool {
+        expmod(a, n, n) == a
+    }
+
+    fn fermat_slow_prime(n: i64) -> bool {
+        for i in 1..n {
+            if !fermat_non_random_test(n, i) {
+                return false;
+            };
+        }
+        return true;
+    }
+    println!("Starting exercise 1.27");
+    let carmichael_nums: Vec<i64> = vec![561, 1105, 1729, 2465, 2821, 6601];
+
+    for carmichael in carmichael_nums {
+        let prime = fermat_slow_prime(carmichael);
+        if prime {
+            println!("{carmichael} is prime (I have been fooled)");
+        } else {
+            println!("{carmichael} is not prime (true, but something has gone wrong...)");
+        }
+    }
+
+    println!("Ending exercise 1.27");
+}
+
+fn exercise1_28() {
+    fn expmod_nontrivial(base: i64, exp: i64, m: i64) -> i64 {
+        fn nontrivial_test(x: i64, n: i64) -> i64 {
+            if !(x == 1 || x == n - 1) && square(x).rem(n) == 1 {
+                return 0;
+            } else {
+                return x;
+            }
+        }
+
+        if exp == 0 {
+            return 1;
+        } else if even(exp) {
+            return square(nontrivial_test(expmod_nontrivial(base, exp / 2, m), m)).rem(m);
+        } else {
+            return (base * expmod_nontrivial(base, exp - 1, m)).rem(m);
+        }
+    }
+
+    fn miller_rabin_test(n: i64) -> bool {
+        // n is the prime to test
+        // a is the iteration step
+        fn try_it(a: i64, n: i64) -> bool {
+            return expmod_nontrivial(a, n - 1, n) == 1;
+        }
+
+        fn iter(a: i64, n: i64) -> bool {
+            if a == 0 {
+                return true;
+            } else if try_it(rand::thread_rng().gen_range(1..=n - 1), n) {
+                return iter(a - 1, n);
+            } else {
+                return false;
+            }
+        }
+
+        return iter(10, n);
+    }
+
+    println!("Starting exercise 1.27");
+    let carmichael_nums: Vec<i64> = vec![561, 1105, 1729, 2465, 2821, 6601];
+
+    for carmichael in carmichael_nums {
+        let prime = miller_rabin_test(carmichael);
+        if prime {
+            println!("{carmichael} is prime (I have been fooled)");
+        } else {
+            println!("{carmichael} is not prime (I have not been fooled)");
+        }
+    }
+
+    println!("Ending exercise 1.27");
 }
 
 #[test]
