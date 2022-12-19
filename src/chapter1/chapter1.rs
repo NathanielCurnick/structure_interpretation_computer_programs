@@ -1,7 +1,13 @@
 use crate::chapter1::{iter_newton_cube_root::cube_root, iter_newton_sqrt::sqrt};
-use num::{traits::Pow, Num};
+use itertools_num::linspace;
+use num::{traits::Pow, Num, One};
+use plotly::{
+    common::{Mode, Title},
+    layout::Axis,
+    Layout, Plot, Scatter,
+};
 use rand::prelude::*;
-use std::{ops::Rem, time::Instant};
+use std::{f64::consts::PI, ops::Rem, time::Instant};
 pub fn chapter1() {
     exercise1_1();
     // No exercise 1.2 since it is a pen and paper exercise
@@ -32,6 +38,21 @@ pub fn chapter1() {
     exercise1_27();
     exercise1_28();
     exercise1_29();
+    exercise1_30();
+    exercise1_31();
+    exercise1_32();
+    exercise1_33();
+    // No exercise 1.34 as it is a pen and paper exercise
+    exercise1_34();
+    exercise1_35_36();
+    exercise1_37();
+    exercise1_38();
+    exercise1_39();
+    exercise1_40();
+    exercise1_41();
+    exercise1_42();
+    exercise1_43();
+    exercise1_44();
 }
 
 fn exercise1_1() {
@@ -92,13 +113,13 @@ fn sum_largest(a: f64, b: f64, c: f64) -> f64 {
 
     return if ab && bc {
         // a and b are the largest
-        a + b
+        return a + b;
     } else if ab && !bc {
         // a and c are the largest
-        a + c
+        return a + c;
     } else {
         // b and c are largest
-        b + c
+        return b + c;
     };
 }
 
@@ -770,7 +791,624 @@ fn exercise1_29() {
     println!("Ending exercise 1.29")
 }
 
-fn exercise1_30() {}
+fn exercise1_30() {
+    fn simpson(f: &dyn Fn(f64) -> f64, a: f64, b: f64, n: i32) -> f64 {
+        // There is a huge trade-off in this function between storing values and continually computing them
+        // I went for storing and passing around values.
+        // While this makes the code messier, for my application CPU cycles are more valuable than RAM
+        // In other applications, you may prefer to calculate many variables such as c, h, n at every iteration
+        fn sum(
+            term: &dyn Fn(&dyn Fn(f64) -> f64, f64, i32, f64, i32) -> f64, // How to calculate the current Simpson term
+            a: f64,                         // The starting lower bound
+            k: i32,                         // The current integer step
+            c: f64,                         // The current step value
+            next: &dyn Fn(f64, f64) -> f64, // How to get to the next value of c
+            b: f64,                         // The upper bound of the integral
+            h: f64,                         // The step size
+            f: &dyn Fn(f64) -> f64,         // The integral function to be calculated
+            n: i32,                         // The total number of steps
+            s: f64,                         // Current sum
+        ) -> f64 {
+            if k > n {
+                return s;
+            } else {
+                return sum(
+                    term,
+                    a,
+                    k + 1,
+                    next(c, h),
+                    next,
+                    b,
+                    h,
+                    f,
+                    n,
+                    s + term(f, a, k, h, n),
+                );
+            }
+        }
+
+        fn y(f: &dyn Fn(f64) -> f64, a: f64, k: i32, h: f64, n: i32) -> f64 {
+            // Could reorganise this let-if for optimisation
+            let mult = if k == 0 {
+                1.0
+            } else if k == n {
+                1.0
+            } else if even(k) {
+                2.0
+            } else {
+                4.0
+            };
+            return mult * f(a + k as f64 * h);
+        }
+
+        fn next(n: f64, h: f64) -> f64 {
+            return n + h;
+        }
+
+        let h = (b - a) / n as f64;
+        let h_reduced = h / 3.0;
+
+        let res = sum(&y, a, 0, a, &next, b, h, f, n, 0.0);
+
+        return h_reduced * res;
+    }
+
+    fn square(x: f64) -> f64 {
+        return x * x;
+    }
+
+    println!("Starting exercise 1.30");
+    println!("For this exercise, we will integrate x^2 between 0 and 1 numerically, the analytic answer is 1/3 = 0.33333.....");
+    let now = Instant::now();
+    let res = simpson(&square, 0.0, 1.0, 10);
+    let time = now.elapsed().as_nanos();
+    println!("The numerical calculation gives {}, in {}ns", res, time);
+    println!("Ending exercise 1.30")
+}
+
+fn exercise1_31() {
+    fn pi_mult(n: i32) -> f64 {
+        fn mult(a: f64, b: f64, k: i32, n: i32) -> f64 {
+            if k == n {
+                return 1.0;
+            }
+
+            let (a_prime, b_prime) = if even(k) { (a + 2.0, b) } else { (a, b + 2.0) };
+
+            return (a / b) * mult(a_prime, b_prime, k + 1, n);
+        }
+
+        return mult(2.0, 3.0, 0, n);
+    }
+
+    fn pi_mult_iter(n: i32) -> f64 {
+        fn iter(a: f64, b: f64, k: i32, n: i32, s: f64) -> f64 {
+            if k == n {
+                return s;
+            }
+
+            let (a_prime, b_prime) = if even(k) { (a + 2.0, b) } else { (a, b + 2.0) };
+
+            return iter(a_prime, b_prime, k + 1, n, (a / b) * s);
+        }
+
+        return iter(2.0, 3.0, 0, n, 1.0);
+    }
+
+    println!("Starting exercise 1.31");
+    let now = Instant::now();
+    let res = pi_mult(100);
+    let time = now.elapsed().as_nanos();
+
+    println!(
+        "Approximating pi/4 ({}), got {} in {}ns",
+        PI / 4.0,
+        res,
+        time
+    );
+
+    println!("Now doing the same iteratively");
+    let now = Instant::now();
+    let res = pi_mult(100);
+    let time = now.elapsed().as_nanos();
+
+    println!(
+        "Approximating pi/4 ({}), got {} in {}ns",
+        PI / 4.0,
+        res,
+        time
+    );
+    println!("Ending exercise 1.31")
+}
+
+fn exercise1_32() {
+    fn accumulate(
+        combiner: &dyn Fn(f64, f64) -> f64,
+        null_value: f64,
+        term: &dyn Fn(f64) -> f64,
+        a: f64,
+        next: &dyn Fn(f64) -> f64,
+        b: f64,
+    ) -> f64 {
+        if a > b {
+            return null_value;
+        } else {
+            return combiner(
+                term(a),
+                accumulate(combiner, null_value, term, next(a), next, b),
+            );
+        }
+    }
+
+    // Demonstration of addition with accumulator
+    {
+        // Example will be summing every number from 1 to 10 (= 55)
+        fn next(a: f64) -> f64 {
+            a + 1.0
+        }
+
+        fn combine(a: f64, b: f64) -> f64 {
+            a + b
+        }
+
+        fn term(a: f64) -> f64 {
+            a
+        }
+
+        let now = Instant::now();
+        let res = accumulate(&combine, 0.0, &term, 1.0, &next, 10.0);
+        let time = now.elapsed().as_nanos();
+
+        println!("Summed all numbers from 1-10, got {} in {}ns", res, time);
+    }
+
+    {
+        // Example of multiplying every number from 1-10 (= 3628800)
+        fn next(a: f64) -> f64 {
+            a + 1.0
+        }
+
+        fn combine(a: f64, b: f64) -> f64 {
+            a * b
+        }
+
+        fn term(a: f64) -> f64 {
+            a
+        }
+
+        let now = Instant::now();
+        let res = accumulate(&combine, 1.0, &term, 1.0, &next, 10.0);
+        let time = now.elapsed().as_nanos();
+
+        println!(
+            "Sum of square of all primes in 1-100, got {} in {}ns",
+            res, time
+        );
+    }
+}
+
+fn exercise1_33() {
+    fn filtered_accumulate(
+        combiner: &dyn Fn(f64, f64) -> f64,
+        null_value: f64,
+        term: &dyn Fn(f64) -> f64,
+        a: f64,
+        next: &dyn Fn(f64) -> f64,
+        b: f64,
+        filter: &dyn Fn(f64) -> bool,
+    ) -> f64 {
+        if a > b {
+            return null_value;
+        } else {
+            if filter(a) {
+                return combiner(
+                    term(a),
+                    filtered_accumulate(combiner, null_value, term, next(a), next, b, filter),
+                );
+            } else {
+                return filtered_accumulate(combiner, null_value, term, next(a), next, b, filter);
+            }
+        }
+    }
+
+    {
+        // Sum of squares of primes
+
+        fn next(a: f64) -> f64 {
+            a + 1.0
+        }
+
+        fn combine(a: f64, b: f64) -> f64 {
+            a + b
+        }
+
+        fn term(a: f64) -> f64 {
+            a.powf(2_f64)
+        }
+
+        fn filter(a: f64) -> bool {
+            prime_fast(a as i32)
+        }
+
+        let now = Instant::now();
+        let res = filtered_accumulate(&combine, 0.0, &term, 1.0, &next, 100.0, &filter);
+        let time = now.elapsed().as_nanos();
+
+        println!(
+            "Multiplied sum of squares of primes from 1-100 got {} in {}ns",
+            res, time
+        );
+    }
+}
+
+fn exercise1_34() {
+    const TOLERANCE: f64 = 0.000001;
+
+    fn fixed_point(f: &dyn Fn(f64) -> f64, first_guess: f64) -> f64 {
+        fn close_enough(v1: f64, v2: f64) -> bool {
+            return (v1 - v2).abs() < TOLERANCE;
+        }
+
+        fn try_guess(f: &dyn Fn(f64) -> f64, guess: f64) -> f64 {
+            let next = f(guess);
+
+            if close_enough(guess, next) {
+                return next;
+            } else {
+                return try_guess(f, next);
+            }
+        }
+
+        return try_guess(f, first_guess);
+    }
+
+    fn golden(a: f64) -> f64 {
+        return 1.0 + 1.0 / a;
+    }
+
+    println!("Starting exercise 1.34");
+    println!("Golden ratio is {}", fixed_point(&golden, 1.0));
+    println!("Ending exercise 1.34");
+}
+
+fn exercise1_35_36() {
+    // Reduced the tolerance to reduce print spam
+    const TOLERANCE: f64 = 0.001;
+
+    fn fixed_point(f: &dyn Fn(f64) -> f64, first_guess: f64) -> f64 {
+        fn close_enough(v1: f64, v2: f64) -> bool {
+            return (v1 - v2).abs() < TOLERANCE;
+        }
+
+        fn try_guess(f: &dyn Fn(f64) -> f64, guess: f64) -> f64 {
+            let next = f(guess);
+            println!("Trying guess {}", next);
+            if close_enough(guess, next) {
+                return next;
+            } else {
+                return try_guess(f, next);
+            }
+        }
+
+        return try_guess(f, first_guess);
+    }
+
+    fn x_sq(x: f64) -> f64 {
+        return 1000.0_f64.ln() / x.ln();
+    }
+
+    fn x_sq_average(x: f64) -> f64 {
+        return (x + 1000.0_f64.ln() / x.ln()) / 2.0;
+    }
+
+    println!("Starting exercise 1.35 (expect a lot of spam)");
+    println!("The solution to x^x = 1000 is {}", fixed_point(&x_sq, 25.0));
+    println!(
+        "The solution to x^x = 1000 (with average damping) is {}",
+        fixed_point(&x_sq_average, 25.0)
+    );
+    println!("Ending exercise 1.35");
+}
+
+fn cont_frac(n: &dyn Fn(f64) -> f64, d: &dyn Fn(f64) -> f64, k: i32) -> f64 {
+    fn recur(i: i32, n: &dyn Fn(f64) -> f64, d: &dyn Fn(f64) -> f64, k: i32) -> f64 {
+        let add = if k == i { 0.0 } else { recur(i + 1, n, d, k) };
+
+        return n(i as f64) / (d(i as f64) + add);
+    }
+
+    return recur(1, n, d, k);
+}
+
+fn exercise1_37() {
+    println!("Starting Exercise 1.37");
+    println!(
+        "Approximating the reciprocal of the golden ratio (0.618033988), as {}",
+        cont_frac(&|n: f64| -> f64 { 1.0 }, &|d: f64| -> f64 { 1.0 }, 1000)
+    );
+    println!("Ending Exercise 1.37");
+}
+
+fn exercise1_38() {
+    fn n(i: f64) -> f64 {
+        return 1.0;
+    }
+
+    fn d(i: f64) -> f64 {
+        if (i + 1.0).rem(3.0) == 0.0 {
+            return 2.0 * ((i + 1.0) / 3.0);
+        } else {
+            return 1.0;
+        }
+    }
+
+    println!("Starting Exercise 1.38");
+    println!(
+        "Approximating e - 2 (0.7182818284) as {}",
+        cont_frac(&n, &d, 100)
+    );
+}
+
+fn exercise1_39() {
+    fn tan_cf(n: &dyn Fn(i32, f64) -> f64, d: &dyn Fn(i32) -> f64, x: f64, k: i32) -> f64 {
+        fn recur(
+            i: i32,
+            n: &dyn Fn(i32, f64) -> f64,
+            d: &dyn Fn(i32) -> f64,
+            x: f64,
+            k: i32,
+        ) -> f64 {
+            let add = if k == i {
+                0.0
+            } else {
+                recur(i + 1, n, d, x, k)
+            };
+
+            return n(i, x) / (d(i) - add);
+        }
+
+        return recur(1, n, d, x, k);
+    }
+
+    fn n(i: i32, x: f64) -> f64 {
+        return if i == 1 { x } else { x.powf(2_f64) };
+    }
+
+    fn d(i: i32) -> f64 {
+        return if i == 1 { 1.0 } else { 2.0 * i as f64 - 1.0 };
+    }
+
+    println!("Starting exercise 1.39");
+    println!(
+        "Approximating tax(1) ({}) as {}",
+        1.0_f64.tan(),
+        tan_cf(&n, &d, 1.0, 100)
+    );
+    println!("Ending exericse 1.39");
+}
+
+fn exercise1_40() {
+    const TOLERANCE: f64 = 1.0;
+
+    fn fixed_point(
+        f: &dyn Fn(f64, (f64, f64, f64)) -> f64,
+        first_guess: f64,
+        params: (f64, f64, f64),
+    ) -> f64 {
+        fn close_enough(v1: f64, v2: f64) -> bool {
+            return (v1 - v2).abs() < TOLERANCE;
+        }
+
+        fn try_guess(
+            f: &dyn Fn(f64, (f64, f64, f64)) -> f64,
+            guess: f64,
+            params: (f64, f64, f64),
+        ) -> f64 {
+            let next = newton_transform(f, guess, params);
+
+            if close_enough(guess, next) {
+                return next;
+            } else {
+                return try_guess(f, next, params);
+            }
+        }
+
+        return try_guess(f, first_guess, params);
+    }
+
+    fn newtons_method(
+        g: &dyn Fn(f64, (f64, f64, f64)) -> f64,
+        guess: f64,
+        params: (f64, f64, f64),
+    ) -> f64 {
+        return fixed_point(g, guess, params);
+    }
+
+    fn derivative(f: &dyn Fn(f64, (f64, f64, f64)) -> f64, x: f64, params: (f64, f64, f64)) -> f64 {
+        let dx = 0.0000001_f64;
+
+        return (f(x + dx, params) - f(x, params)) / dx;
+    }
+
+    fn newton_transform(
+        g: &dyn Fn(f64, (f64, f64, f64)) -> f64,
+        x: f64,
+        params: (f64, f64, f64),
+    ) -> f64 {
+        return x - (g(x, params) / derivative(g, x, params));
+    }
+
+    fn cubic(x: f64, params: (f64, f64, f64)) -> f64 {
+        // params: (a, b, c)
+        // equation is x^3 + ax^2 + bx + c
+        let res = x.powf(3_f64) + params.0 * x.powf(2_f64) + params.1 * x + params.2;
+
+        return res;
+    }
+
+    println!("Starting exercise 1.40");
+    println!("Finding fixed points of x^3 + 2x^2 + 3x + 4");
+    println!("Found: {}", newtons_method(&cubic, 1.2, (2.0, 3.0, 4.0)));
+    println!("Ending exercise 1.40")
+}
+
+fn exercise1_41() {
+    fn inc(x: f64) -> f64 {
+        return x + 1.0;
+    }
+
+    fn double(f: &dyn Fn(f64) -> f64, x: f64) -> f64 {
+        return f(f(x));
+    }
+
+    println!("Starting exercise 1.41");
+    println!("Adding 1 to 5 twice gives {}", double(&inc, 5.0));
+    println!("Ending exercise 1.41");
+}
+
+fn exercise1_42() {
+    type OneFn = dyn Fn(f64) -> f64;
+
+    fn compose(f: &OneFn, g: &OneFn, x: f64) -> f64 {
+        f(g(x))
+    }
+
+    fn square(x: f64) -> f64 {
+        return x * x;
+    }
+
+    fn inc(x: f64) -> f64 {
+        return x + 1.0;
+    }
+
+    println!("Starting exercise 1.42");
+    println!("{}", compose(&square, &inc, 6.0));
+    println!("Ending exercise 1.42");
+}
+
+fn exercise1_43() {
+    type OneFn = dyn Fn(f64) -> f64;
+
+    fn square(x: f64) -> f64 {
+        return x * x;
+    }
+
+    fn repeating(f: &OneFn, x: f64, n: u32) -> f64 {
+        if n == 1 {
+            return f(x);
+        } else {
+            return f(repeating(f, x, n - 1));
+        }
+    }
+
+    println!("Starting exercise 1.43");
+    println!("Squaring 5 twice is {}", repeating(&square, 5.0, 2));
+    println!("Ending exercise 1.43");
+}
+
+fn exercise1_44() {
+    type OneFn = dyn Fn(f64) -> f64;
+    const A: f64 = 3.0;
+    const B: f64 = 2.0;
+    const C: f64 = 4.0;
+    const D: f64 = 2.0;
+    fn fun(x: f64) -> f64 {
+        return A * x.sin() - B * x.cos() + C * x.sin() - D;
+    }
+
+    fn smooth(f: &OneFn, x: f64, tol: f64) -> f64 {
+        return (f(x - tol) + f(x) + f(x + tol)) / 3.0;
+    }
+
+    fn repeating_smooth(f: &OneFn, x: f64, tol: f64, n: i32) -> f64 {
+        if n == 1 {
+            return smooth(f, x, tol);
+        } else {
+            return (repeating_smooth(f, x - tol, tol, n - 1)
+                + repeating_smooth(f, x, tol, n - 1)
+                + repeating_smooth(f, x + tol, tol, n - 1))
+                / 3.0;
+        }
+    }
+
+    println!("Starting exercise 1.44");
+    println!("Please check your web browser for the graph :)");
+    let x: Vec<f64> = linspace(-20.0, 20.0, 5_000).collect();
+
+    let func: Vec<f64> = x.iter().map(|c| fun(c.clone())).collect();
+    let smoothed: Vec<f64> = x.iter().map(|c| smooth(&fun, c.clone(), 1.0)).collect();
+    let smoothed5: Vec<f64> = x
+        .iter()
+        .map(|c| repeating_smooth(&fun, c.clone(), 1.0, 5))
+        .collect();
+
+    let mut plot = Plot::new();
+
+    let layout = Layout::new()
+        .x_axis(Axis::new().matches(false).title(Title::new("x")))
+        .y_axis(Axis::new().matches(false).title(Title::new("y")))
+        .title(Title::new("Exercise 1.44"));
+
+    plot.set_layout(layout);
+
+    plot.add_trace(
+        Scatter::new(x.clone(), func)
+            .mode(Mode::Lines)
+            .name("Function"),
+    );
+    plot.add_trace(
+        Scatter::new(x.clone(), smoothed)
+            .mode(Mode::Lines)
+            .name("Smoothed"),
+    );
+    plot.add_trace(
+        Scatter::new(x.clone(), smoothed5)
+            .mode(Mode::Lines)
+            .name("Smoothed 5 times"),
+    );
+
+    plot.show();
+    println!("Ending exercise 1.44");
+}
+
+// fn exercise1_45() {
+//     const TOLERANCE: f64 = 0.01;
+//     const A: f64 = 2.0;
+//     const B: f64 = 3.0;
+//     const C: f64 = 2.5;
+//     const D: f64 = -1.0;
+//     const E: f64 = 1.5;
+//     type OneFn = dyn Fn(f64) -> f64;
+//     fn fixed_point(f: &OneFn, first_guess: f64) -> f64 {
+//         fn close_enough(v1: f64, v2: f64) -> bool {
+//             return (v1 - v2).abs() < TOLERANCE;
+//         }
+
+//         fn try_guess(f: &OneFn, guess: f64) -> f64 {
+//             let next = f(guess);
+//             println!("Trying guess {}", next);
+//             if close_enough(guess, next) {
+//                 return next;
+//             } else {
+//                 return try_guess(f, next);
+//             }
+//         }
+
+//         return try_guess(f, first_guess);
+//     }
+
+//     fn damp(x: f64) -> f64 {
+//         return x.ln() / 2_f64.ln();
+//     }
+
+//     fn average(a: f64, b: f64) -> f64 {
+//         return (a + b) / 2.0;
+//     }
+
+//     fn fun(x: f64) -> f64 {
+//         return A * x.powf(4_f64) + B * x.powf(3_f64) + C * x.powf(2_f64) + D * x + E;
+//     }
+// }
 
 #[test]
 fn test_sum_largest() {

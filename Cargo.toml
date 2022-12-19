@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 num = "0.4"
 rand = "0.8.5"
+plotly = { git = "https://github.com/AnBowell/plotly.git", branch = "mesh3d" }
+itertools = "0.10.3"
+itertools-num = "0.1.3"

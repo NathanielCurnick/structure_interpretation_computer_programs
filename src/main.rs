@@ -1,10 +1,18 @@
 use chapter1::chapter1::chapter1;
-
-use crate::chapter1::{iter_newton_cube_root::cube_root, iter_newton_sqrt::sqrt};
+use chapter2::chapter2::chapter2;
 
 mod chapter1;
 mod chapter2;
 
+const CHAPTER1: bool = false;
+const CHAPTER2: bool = true;
+
 fn main() {
-    chapter1();
+    if CHAPTER1 {
+        chapter1();
+    }
+
+    if CHAPTER2 {
+        chapter2();
+    }
 }
