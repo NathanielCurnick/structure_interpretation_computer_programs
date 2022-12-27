@@ -1,6 +1,8 @@
-use std::cmp::min;
+use std::ops::Rem;
 
 pub fn chapter2() {
+    // This chapter is often including the LISP Pair, which doesn't really have a Rust analogy
+    // So, the exercises might seem thin or unusual in some places
     exercise2_1();
     exercise2_2();
     exercise2_3();
@@ -8,6 +10,12 @@ pub fn chapter2() {
     // No exercise 2.4, since it is about Lisp Pairs (we don't have!)
     exercise2_6();
     exercise2_7();
+    exercise2_19();
+    exercise2_20();
+    exercise2_34();
+    // TODO: find some kind of graphics package to do the painter exercises
+    exercise2_59();
+    exercise2_61();
 }
 
 fn exercise2_1() {
@@ -247,4 +255,218 @@ fn exercise2_7() {
                                                      // BUT I'm pretty confident that is how one would subtract intervals...
     println!("wa * wb = {} | we = {}", wa * wb, we);
     println!("wa / wb = {} | wf = {}", wa / wb, wf);
+}
+
+fn exercise2_17() {
+    fn last(l: &Vec<f64>) -> f64 {
+        return l[l.len()];
+    }
+}
+
+fn exercise2_18() {
+    fn reverse(l: &Vec<f64>) -> Vec<f64> {
+        let mut a = l.clone();
+        a.reverse();
+        return a;
+    }
+}
+
+fn exercise2_19() {
+    let us_coins = vec![1, 5, 10, 25, 50];
+    let uk_coins = vec![1, 2, 5, 10, 20, 50, 100];
+    fn count_change(amount: i32, coinage: &Vec<i32>) -> i32 {
+        return cc(amount, coinage.len() as i32, coinage);
+    }
+
+    fn cc(amount: i32, kinds_of_coins: i32, coinage: &Vec<i32>) -> i32 {
+        if amount == 0 {
+            return 1;
+        } else if amount < 0 || kinds_of_coins == 0 {
+            return 0;
+        } else {
+            return cc(amount, kinds_of_coins - 1, coinage)
+                + cc(
+                    amount - get_coinage(coinage, kinds_of_coins),
+                    kinds_of_coins,
+                    coinage,
+                );
+        }
+    }
+
+    fn get_coinage(coinage: &Vec<i32>, kinds_of_coins: i32) -> i32 {
+        return coinage[(kinds_of_coins - 1) as usize];
+    }
+
+    fn first_denomination(kinds_of_coins: i32) -> i32 {
+        return match kinds_of_coins {
+            1 => 1,
+            2 => 5,
+            3 => 10,
+            4 => 25,
+            5 => 50,
+            _ => panic!("The USD only has these kinds of coins!"),
+        };
+    }
+
+    println!("Starting Exercise 2.19");
+    println!(
+        "There are {} ways to split $1",
+        count_change(100, &us_coins)
+    );
+    println!(
+        "There are {} ways to split £1",
+        count_change(100, &uk_coins)
+    );
+    println!("Ending Exercise 2.19");
+}
+
+fn exercise2_20() {
+    fn same_parity(w: &Vec<i32>) -> Vec<i32> {
+        let mut v = vec![];
+
+        let even = if w[0].rem(2) == 0 { true } else { false };
+
+        for i in w {
+            if (i.rem(2) == 0) == even {
+                v.push(i.clone());
+            }
+        }
+
+        return v;
+    }
+
+    println!("Starting Exercise 2.20");
+    println!(
+        "The same parity of (2,3,4,5,6,7) is {:?}",
+        same_parity(&vec![2, 3, 4, 5, 6, 7])
+    );
+    println!(
+        "The same parity of (1,2,3,4,5,6,7) is {:?}",
+        same_parity(&vec![1, 2, 3, 4, 5, 6, 7])
+    );
+    println!("Ending Exercise 2.20");
+}
+
+fn exercise2_34() {
+    fn horner_eval(x: f64, coeffs: &Vec<f64>) -> f64 {
+        let mut a = coeffs.clone();
+        a.reverse();
+        let mut sum = 0.0;
+        for (i, coeff) in a.iter().enumerate() {
+            if i == a.len() - 1 {
+                sum = sum + coeff;
+                continue;
+            }
+            sum = (sum + coeff) * x;
+        }
+
+        return sum;
+    }
+
+    println!("Starting exercise 2.34");
+    println!(
+        "Evaluating 1 + 3x + 5x^3 + x^5 at x=2 to be {} (theoretically 79)",
+        horner_eval(2.0, &vec![1.0, 3.0, 0.0, 5.0, 0.0, 1.0])
+    );
+    println!("Ending exercise 2.34");
+}
+
+fn exercise2_59() {
+    fn union(a: &Vec<f64>, b: &Vec<f64>) -> Vec<f64> {
+        let mut c = vec![];
+
+        for i in a {
+            if c.contains(i) {
+                continue;
+            }
+            c.push(i.clone());
+        }
+        for i in b {
+            if c.contains(i) {
+                continue;
+            }
+            c.push(i.clone());
+        }
+
+        return c;
+    }
+
+    println!("Starting exercise 2.59");
+    println!(
+        "The union of (1,2,3) and (3,4,5) is {:?}",
+        union(&vec![1.0, 2.0, 3.0], &vec![3.0, 4.0, 5.0])
+    );
+    println!("Ending exercise 2.59");
+}
+
+fn exercise2_60() {
+    fn element_of_set(element: f64, set: &Vec<f64>) -> bool {
+        return set.contains(&element);
+    }
+
+    fn adjoin_set(a: &Vec<f64>, x: f64) -> Vec<f64> {
+        let mut b = a.clone();
+        b.push(x);
+        return b;
+    }
+
+    fn union_set(a: &Vec<f64>, b: &Vec<f64>) -> Vec<f64> {
+        let mut c = vec![];
+
+        for i in a {
+            c.push(i.clone());
+        }
+        for i in b {
+            c.push(i.clone());
+        }
+
+        return c;
+    }
+
+    fn intersection_set(a: &Vec<f64>, b: &Vec<f64>) -> Vec<f64> {
+        let mut c = vec![];
+
+        for i in a {
+            if b.contains(i) {
+                c.push(i.clone());
+            }
+        }
+
+        return c;
+    }
+}
+
+fn exercise2_61() {
+    // This function MUST take ordered, single instance, vectors
+    fn adjoin_set(a: &Vec<f64>, x: f64) -> Vec<f64> {
+        let mut b = vec![];
+        let mut added = false;
+        if a.contains(&x) {
+            return a.clone();
+        }
+
+        for (i, element) in a.iter().enumerate() {
+            b.push(element.clone());
+            if !added {
+                if element < &x && a[i + 1] > x {
+                    b.push(x);
+                    added = true;
+                }
+            }
+        }
+
+        return b;
+    }
+
+    println!("Starting exercise 2.61");
+    let a = vec![1.0, 2.0, 3.0, 5.0];
+
+    println!("{:?}", adjoin_set(&a, 4.0));
+    println!("Ending exercise 2.61");
+}
+
+fn exercise2_62() {
+    fn union_sets(a: &Vec<f64>, b: &Vec<f64>) -> Vec<f64> {
+        todo!();
+    }
 }
